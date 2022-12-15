@@ -1,5 +1,6 @@
 import { MongoClient } from 'mongodb';
 import { MONGO_URL, MONGO_VOLUME_COLLECTION, MONGO_VOLUME_DB } from './config';
+import { Volume } from './types/Volume';
 
 export async function getVolumes() {
   const client = new MongoClient(MONGO_URL);
@@ -18,11 +19,6 @@ export async function getVolumes() {
   }
   return result;
 }
-
-export type Volume = {
-  pair: string;
-  volUsdt: number;
-};
 
 export function isVolume(obj: unknown): obj is Volume {
   return (

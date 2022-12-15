@@ -1,5 +1,6 @@
 import { MongoClient } from 'mongodb';
 import { MONGO_TRADES_DB, MONGO_URL } from './config';
+import { Watcher } from './types/Watcher';
 
 export async function getDistinctWatchers() {
   const client = new MongoClient(MONGO_URL);
@@ -21,7 +22,3 @@ function isWatcher(obj: unknown): obj is Watcher {
     typeof (obj as Watcher).config === 'string'
   );
 }
-export type Watcher = {
-  type: string;
-  config: string;
-};

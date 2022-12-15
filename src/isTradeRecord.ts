@@ -1,3 +1,5 @@
+import { Watcher } from './types/Watcher';
+
 export type TradeRecord = {
   id: string;
   amount: number;
@@ -15,10 +17,6 @@ export type TradeRecord = {
   pnl: number;
 };
 
-export type Watcher = {
-  type: string;
-  config: string;
-};
 // create the validator function for the TradeRecord type using typescript type guard
 export function isTradeRecord(trade: unknown): trade is TradeRecord {
   return (

@@ -1,9 +1,18 @@
 import { Collection, MongoClient } from 'mongodb';
-import { MONGO_TRADES_DB, MONGO_URL } from './config';
-import { getDistinctWatchers, Watcher } from './getDistinctWatchers';
+import {
+  MONGO_PREDICTION_COLLECTION,
+  MONGO_PREDICTION_DB,
+  MONGO_TRADES_DB,
+  MONGO_URL,
+} from './config';
+import { getDistinctWatchers } from './getDistinctWatchers';
 import { getHistoryPnlWithRadiusOf } from './getHistoryPnlOf';
-import { getPairsForRadius, getVolumes, Volume } from './getVolumes';
+import { getPairsForRadius, getVolumes } from './getVolumes';
 import { isTradeRecord, TradeRecord } from './isTradeRecord';
+import { SimulationRecord } from './types/SimulationRecord';
+import { SimulationUnitResult } from './types/SimulationUnitResult';
+import { Volume } from './types/Volume';
+import { Watcher } from './types/Watcher';
 
 async function run() {
   const radiusMin = 10;
@@ -12,7 +21,7 @@ async function run() {
   const historyMax = 10;
   const winRateMin = 0.5;
   const winRateMax = 0.9;
-  trainModel2(
+  const results = await trainModel2(
     radiusMin,
     radiusMax,
     historyMin,
@@ -20,9 +29,23 @@ async function run() {
     winRateMin,
     winRateMax
   );
+  if (results.length) {
+    await storeSimulationResults(results);
+  }
 }
 
 run();
+
+async function storeSimulationResults(results: SimulationRecord[]) {
+  const client = new MongoClient(MONGO_URL);
+  await client.connect();
+  const db = client.db(MONGO_PREDICTION_DB);
+  const collection: Collection<SimulationRecord> = db.collection(
+    MONGO_PREDICTION_COLLECTION
+  );
+  await collection.insertMany(results);
+  await client.close();
+}
 
 /**
  * This function trains the model for volume radius prediction
@@ -47,6 +70,7 @@ async function trainModel2(
   const volumes = await getVolumes();
   const watchers = await getDistinctWatchers();
   const startDate = new Date('2022-12-01');
+  const result: SimulationRecord[] = [];
 
   const client = new MongoClient(MONGO_URL);
   await client.connect();
@@ -117,9 +141,19 @@ async function trainModel2(
       //      console.log(watcher.type, watcher.config);
       console.log('best config', bestConfig);
       console.log('-');
+      result.push({
+        watcher,
+        config: {
+          radius: bestConfig.radius,
+          historyLimit: bestConfig.historyLimit,
+          winRateLimit: bestConfig.winRateLimit,
+        },
+        created_at: new Date(),
+      });
     }
   }
   await client.close();
+  return result;
 }
 
 function substractFees(result: SimulationUnitResult): SimulationUnitResult {
@@ -133,13 +167,6 @@ function substractFees(result: SimulationUnitResult): SimulationUnitResult {
     tradeCountWithPrediction: result.tradeCountWithPrediction,
   };
 }
-
-type SimulationUnitResult = {
-  netPnlBase: number;
-  netPnlWithPrediction: number;
-  tradeCountBase: number;
-  tradeCountWithPrediction: number;
-};
 
 /**
  * This method gives, for a watcher, radius,
