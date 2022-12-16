@@ -1,3 +1,4 @@
+import { sub } from 'date-fns';
 import { Collection } from 'mongodb';
 import { getDistinctWatchers } from './getDistinctWatchers';
 import { getHistoryPnlWithRadiusOf } from './getHistoryPnlOf';
@@ -62,7 +63,7 @@ async function trainModel2(
 ) {
   const volumes = await getVolumes();
   const watchers = await getDistinctWatchers();
-  const startDate = new Date('2022-12-01');
+  const startDate = sub(new Date(), { days: 20 });
   const result: SimulationRecord[] = [];
 
   const { collection, close } = await getTradeStore();
