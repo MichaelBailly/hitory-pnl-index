@@ -1,10 +1,41 @@
 import { Collection } from 'mongodb';
 import { isTradeRecord, TradeRecord } from './isTradeRecord';
+import { SimulationRecord } from './types/SimulationRecord';
+import { TradeRecordFragment } from './types/TradeRecordFragment';
+
+export async function getPredictionOnSimulation(
+  collection: Collection<TradeRecord>,
+  radiusPairs: string[],
+  trade: TradeRecordFragment,
+  simulation: SimulationRecord
+) {
+  const tradeHistory = await collection
+    .find({
+      pair: { $in: radiusPairs },
+      'watcher.type': trade.watcher.type,
+      'watcher.config': trade.watcher.config,
+      boughtTimestamp: { $lt: trade.boughtTimestamp },
+    })
+    .sort({ boughtTimestamp: -1 })
+    .limit(simulation.config.historyLimit)
+    .toArray();
+
+  if (!tradeHistory.every(isTradeRecord)) {
+    throw new Error('Invalid trade record');
+  }
+
+  const testResult: boolean | null = await testHistoryPnlOf(
+    tradeHistory,
+    simulation.config.historyLimit,
+    simulation.config.winRateLimit
+  );
+  return testResult;
+}
 
 export async function getHistoryPnlWithRadiusOf(
   collection: Collection<TradeRecord>,
   radiusPairs: string[],
-  trade: TradeRecord,
+  trade: TradeRecordFragment,
   historyMin: number,
   historyMax: number,
   winRateMin: number,

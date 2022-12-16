@@ -10,3 +10,8 @@ export const MONGO_PREDICTION_DB =
   process.env.MONGO_PREDICTION_DB || 'predictions';
 export const MONGO_PREDICTION_COLLECTION =
   process.env.MONGO_PREDICTION_COLLECTION || 'predictions';
+
+/* webserver configutation */
+export const HTTP_PORT = process.env.PORT || 3210;
+
+export const RECORDER_FILE_PATH = process.env.RECORDER_FILE_PATH || '.';

@@ -1,14 +1,10 @@
-import { MongoClient } from 'mongodb';
-import { MONGO_TRADES_DB, MONGO_URL } from './config';
+import { getTradeStore } from './tradesStore';
 import { Watcher } from './types/Watcher';
 
 export async function getDistinctWatchers() {
-  const client = new MongoClient(MONGO_URL);
-  await client.connect();
-  const db = client.db(MONGO_TRADES_DB);
-  const collection = db.collection('trades');
+  const { collection, close } = await getTradeStore();
   const watchers = await collection.distinct('watcher');
-  await client.close();
+  await close();
   if (!watchers.every(isWatcher)) {
     throw new Error('Invalid watcher');
   }

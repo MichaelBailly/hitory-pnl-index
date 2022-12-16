@@ -1,14 +1,11 @@
-import { Collection, MongoClient } from 'mongodb';
-import {
-  MONGO_PREDICTION_COLLECTION,
-  MONGO_PREDICTION_DB,
-  MONGO_TRADES_DB,
-  MONGO_URL,
-} from './config';
+import { Collection } from 'mongodb';
 import { getDistinctWatchers } from './getDistinctWatchers';
 import { getHistoryPnlWithRadiusOf } from './getHistoryPnlOf';
 import { getPairsForRadius, getVolumes } from './getVolumes';
 import { isTradeRecord, TradeRecord } from './isTradeRecord';
+import { buildAndRecordPredictionModel } from './predictionModel';
+import { getTradeStore } from './tradesStore';
+import { getPredictionStore } from './types/predictionStore';
 import { SimulationRecord } from './types/SimulationRecord';
 import { SimulationUnitResult } from './types/SimulationUnitResult';
 import { Volume } from './types/Volume';
@@ -32,19 +29,15 @@ async function run() {
   if (results.length) {
     await storeSimulationResults(results);
   }
+  await buildAndRecordPredictionModel();
 }
 
 run();
 
 async function storeSimulationResults(results: SimulationRecord[]) {
-  const client = new MongoClient(MONGO_URL);
-  await client.connect();
-  const db = client.db(MONGO_PREDICTION_DB);
-  const collection: Collection<SimulationRecord> = db.collection(
-    MONGO_PREDICTION_COLLECTION
-  );
+  const { collection, close } = await getPredictionStore();
   await collection.insertMany(results);
-  await client.close();
+  await close();
 }
 
 /**
@@ -72,10 +65,7 @@ async function trainModel2(
   const startDate = new Date('2022-12-01');
   const result: SimulationRecord[] = [];
 
-  const client = new MongoClient(MONGO_URL);
-  await client.connect();
-  const db = client.db(MONGO_TRADES_DB);
-  const collection: Collection<TradeRecord> = db.collection('trades');
+  const { collection, close } = await getTradeStore();
 
   for (const watcher of watchers) {
     const bestConfig = {
@@ -152,7 +142,7 @@ async function trainModel2(
       });
     }
   }
-  await client.close();
+  await close();
   return result;
 }
 
