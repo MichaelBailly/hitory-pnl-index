@@ -67,84 +67,177 @@ async function trainModel2(
   const result: SimulationRecord[] = [];
 
   const { collection, close } = await getTradeStore();
-
+  /*
   for (const watcher of watchers) {
-    const bestConfig = {
-      radius: 0,
-      historyLimit: 0,
-      winRateLimit: 0,
-      result: {
-        netPnlBase: 0,
-        netPnlWithPrediction: 0,
-        tradeCountWithPrediction: 0,
-        tradeCountBase: 0,
-      },
-    };
-    for (let radius = radiusMin; radius <= radiusMax; radius++) {
-      const simulationResults = await testHistoryPnl2(
+    const watcherResult = await trainSingleWatcher(
+      radiusMin,
+      radiusMax,
+      collection,
+      volumes,
+      watcher,
+      startDate,
+      historyMin,
+      historyMax,
+      winRateMin,
+      winRateMax
+    );
+    if (watcherResult) {
+      result.push(watcherResult);
+    }
+  }
+  */
+
+  const parallelResult = await parallelCalls(
+    radiusMin,
+    radiusMax,
+    historyMin,
+    historyMax,
+    winRateMin,
+    winRateMax,
+    collection,
+    volumes,
+    watchers,
+    startDate
+  );
+  console.log('End of parallel calls');
+  await close();
+  return parallelResult;
+}
+
+function parallelCalls(
+  radiusMin: number,
+  radiusMax: number,
+  historyMin: number,
+  historyMax: number,
+  winRateMin: number,
+  winRateMax: number,
+  collection: Collection<TradeRecord>,
+  volumes: Volume[],
+  watchers: Watcher[],
+  startDate: Date
+): Promise<SimulationRecord[]> {
+  const result: SimulationRecord[] = [];
+  const MAX_RUNNING_CALLS = 3;
+  const localWatchers = [...watchers];
+  let runningCalls = 0;
+
+  return new Promise(async (resolve) => {
+    // iterate over watchers and call trainSingleWatcher, with at most two running calls in parallel
+    // when all calls are done, resolve the promise
+    watchers.forEach(async (watcher) => {
+      while (runningCalls >= MAX_RUNNING_CALLS) {
+        await new Promise((r) => setTimeout(r, 500));
+      }
+      runningCalls++;
+      const watcherResult = await trainSingleWatcher(
+        radiusMin,
+        radiusMax,
         collection,
         volumes,
         watcher,
         startDate,
-        radius,
         historyMin,
         historyMax,
         winRateMin,
         winRateMax
       );
+      if (watcherResult) {
+        result.push(watcherResult);
+      }
+      runningCalls--;
+      localWatchers.pop();
+      if (localWatchers.length === 0) {
+        resolve(result);
+      }
+    });
+  });
+}
+
+async function trainSingleWatcher(
+  radiusMin: number,
+  radiusMax: number,
+  collection: Collection<TradeRecord>,
+  volumes: Volume[],
+  watcher: Watcher,
+  startDate: Date,
+  historyMin: number,
+  historyMax: number,
+  winRateMin: number,
+  winRateMax: number
+) {
+  const bestConfig = {
+    radius: 0,
+    historyLimit: 0,
+    winRateLimit: 0,
+    result: {
+      netPnlBase: 0,
+      netPnlWithPrediction: 0,
+      tradeCountWithPrediction: 0,
+      tradeCountBase: 0,
+    },
+  };
+  for (let radius = radiusMin; radius <= radiusMax; radius++) {
+    const simulationResults = await testHistoryPnl2(
+      collection,
+      volumes,
+      watcher,
+      startDate,
+      radius,
+      historyMin,
+      historyMax,
+      winRateMin,
+      winRateMax
+    );
+    for (
+      let historyLimit = historyMin;
+      historyLimit <= historyMax;
+      historyLimit++
+    ) {
       for (
-        let historyLimit = historyMin;
-        historyLimit <= historyMax;
-        historyLimit++
+        let winRateLimit = winRateMin;
+        winRateLimit <= winRateMax;
+        winRateLimit += 0.1
       ) {
-        for (
-          let winRateLimit = winRateMin;
-          winRateLimit <= winRateMax;
-          winRateLimit += 0.1
+        if (!simulationResults[historyLimit]) {
+          continue;
+        }
+        const rawResult = simulationResults[historyLimit][winRateLimit];
+        if (!rawResult) {
+          continue;
+        }
+        const result = substractFees(rawResult);
+        if (
+          result.netPnlWithPrediction < 0 ||
+          result.netPnlBase > result.netPnlWithPrediction
         ) {
-          if (!simulationResults[historyLimit]) {
-            continue;
-          }
-          const rawResult = simulationResults[historyLimit][winRateLimit];
-          if (!rawResult) {
-            continue;
-          }
-          const result = substractFees(rawResult);
-          if (
-            result.netPnlWithPrediction < 0 ||
-            result.netPnlBase > result.netPnlWithPrediction
-          ) {
-            continue;
-          }
-          if (
-            result.netPnlWithPrediction > bestConfig.result.netPnlWithPrediction
-          ) {
-            bestConfig.radius = radius;
-            bestConfig.historyLimit = historyLimit;
-            bestConfig.winRateLimit = winRateLimit;
-            bestConfig.result = result;
-          }
+          continue;
+        }
+        if (
+          result.netPnlWithPrediction > bestConfig.result.netPnlWithPrediction
+        ) {
+          bestConfig.radius = radius;
+          bestConfig.historyLimit = historyLimit;
+          bestConfig.winRateLimit = winRateLimit;
+          bestConfig.result = result;
         }
       }
     }
-    console.log(watcher.type, watcher.config);
-    if (bestConfig.result.netPnlWithPrediction > 0) {
-      //      console.log(watcher.type, watcher.config);
-      console.log('best config', bestConfig);
-      console.log('-');
-      result.push({
-        watcher,
-        config: {
-          radius: bestConfig.radius,
-          historyLimit: bestConfig.historyLimit,
-          winRateLimit: bestConfig.winRateLimit,
-        },
-        created_at: new Date(),
-      });
-    }
   }
-  await close();
-  return result;
+  console.log(watcher.type, watcher.config);
+  if (bestConfig.result.netPnlWithPrediction > 0) {
+    //      console.log(watcher.type, watcher.config);
+    console.log('best config', bestConfig);
+    console.log('-');
+    return {
+      watcher,
+      config: {
+        radius: bestConfig.radius,
+        historyLimit: bestConfig.historyLimit,
+        winRateLimit: bestConfig.winRateLimit,
+      },
+      created_at: new Date(),
+    };
+  }
 }
 
 function substractFees(result: SimulationUnitResult): SimulationUnitResult {
