@@ -64,8 +64,6 @@ async function trainModel2(
   const volumes = await getVolumes();
   const watchers = await getDistinctWatchers();
   const startDate = sub(new Date(), { days: 20 });
-  const result: SimulationRecord[] = [];
-
   const { collection, close } = await getTradeStore();
   /*
   for (const watcher of watchers) {
@@ -99,7 +97,6 @@ async function trainModel2(
     watchers,
     startDate
   );
-  console.log('End of parallel calls');
   await close();
   return parallelResult;
 }
@@ -146,8 +143,9 @@ function parallelCalls(
       }
       runningCalls--;
       localWatchers.pop();
+      console.log('remaining tasks:', localWatchers.length);
       if (localWatchers.length === 0) {
-        resolve(result);
+        resolve(removeUselessSimulationResults(result));
       }
     });
   });
@@ -226,8 +224,7 @@ async function trainSingleWatcher(
   console.log(watcher.type, watcher.config);
   if (bestConfig.result.netPnlWithPrediction > 0) {
     //      console.log(watcher.type, watcher.config);
-    console.log('best config', bestConfig);
-    console.log('-');
+    console.log(bestConfig);
     return {
       watcher,
       config: {
@@ -238,6 +235,25 @@ async function trainSingleWatcher(
       created_at: new Date(),
     };
   }
+}
+
+function removeUselessSimulationResults(results: SimulationRecord[]) {
+  const newResults: SimulationRecord[] = [];
+
+  for (const result of results) {
+    if (result.watcher.config.endsWith(',0,0')) {
+      const siblingResult = results.find(
+        (r) =>
+          r.watcher.type === result.watcher.type &&
+          r.watcher.config ===
+            result.watcher.config.replace(',0,0', ',1.03,0.9')
+      );
+      if (!siblingResult) {
+        newResults.push(result);
+      }
+    }
+  }
+  return newResults;
 }
 
 function substractFees(result: SimulationUnitResult): SimulationUnitResult {
