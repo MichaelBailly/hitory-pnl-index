@@ -1,5 +1,6 @@
 import { sub } from 'date-fns';
 import { Collection } from 'mongodb';
+import { MODEL_FILE } from './config';
 import { getDistinctWatchers } from './getDistinctWatchers';
 import { getHistoryPnlWithRadiusOf } from './getHistoryPnlOf';
 import { getPairsForRadius, getVolumes } from './getVolumes';
@@ -30,7 +31,7 @@ async function run() {
   if (results.length) {
     await storeSimulationResults(results);
   }
-  await buildAndRecordPredictionModel();
+  await buildAndRecordPredictionModel(MODEL_FILE);
 }
 
 run();

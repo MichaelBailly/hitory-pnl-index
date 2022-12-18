@@ -15,3 +15,5 @@ export const MONGO_PREDICTION_COLLECTION =
 export const HTTP_PORT = process.env.PORT || 3210;
 
 export const RECORDER_FILE_PATH = process.env.RECORDER_FILE_PATH || '.';
+
+export const MODEL_FILE = process.env.MODEL_FILE || 'model.json';
