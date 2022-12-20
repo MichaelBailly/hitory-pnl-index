@@ -97,7 +97,7 @@ export function testHistoryPnlOf(
   if (population.length !== historyLimit) {
     return null;
   }
-  const wins = tradeHistory.filter((t) => t.pnl > 0).length;
+  const wins = population.filter((t) => t.pnl > 0).length;
   if (wins / historyLimit > winRateLimit) {
     return true;
   }
