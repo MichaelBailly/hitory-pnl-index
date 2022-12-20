@@ -20,7 +20,7 @@ async function run() {
   const historyMax = 10;
   const winRateMin = 0.5;
   const winRateMax = 0.9;
-  const results = await trainModel2(
+  const results = await trainModel(
     radiusMin,
     radiusMax,
     historyMin,
@@ -54,7 +54,7 @@ async function storeSimulationResults(results: SimulationRecord[]) {
  * Then, when a new trade is coming, applying CMB
  * shall give a take/pass on the trade
  */
-async function trainModel2(
+async function trainModel(
   radiusMin: number,
   radiusMax: number,
   historyMin: number,
@@ -66,25 +66,6 @@ async function trainModel2(
   const watchers = await getDistinctWatchers();
   const startDate = sub(new Date(), { days: 20 });
   const { collection, close } = await getTradeStore();
-  /*
-  for (const watcher of watchers) {
-    const watcherResult = await trainSingleWatcher(
-      radiusMin,
-      radiusMax,
-      collection,
-      volumes,
-      watcher,
-      startDate,
-      historyMin,
-      historyMax,
-      winRateMin,
-      winRateMax
-    );
-    if (watcherResult) {
-      result.push(watcherResult);
-    }
-  }
-  */
 
   const parallelResult = await parallelCalls(
     radiusMin,
@@ -176,7 +157,7 @@ async function trainSingleWatcher(
     },
   };
   for (let radius = radiusMin; radius <= radiusMax; radius++) {
-    const simulationResults = await testHistoryPnl2(
+    const simulationResults = await testHistoryPnl(
       collection,
       volumes,
       watcher,
@@ -283,7 +264,7 @@ function substractFees(result: SimulationUnitResult): SimulationUnitResult {
  * @param winRateLimit the winrate ratio to have
  * @returns
  */
-async function testHistoryPnl2(
+async function testHistoryPnl(
   collection: Collection<TradeRecord>,
   volumes: Volume[],
   watcher: Watcher,
