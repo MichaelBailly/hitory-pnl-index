@@ -1,4 +1,4 @@
-import { Watcher } from './types/Watcher';
+import { Watcher } from './Watcher';
 
 export type TradeRecord = {
   id: string;

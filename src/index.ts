@@ -4,7 +4,7 @@ import { MODEL_FILE } from './config';
 import { getDistinctWatchers } from './getDistinctWatchers';
 import { getHistoryPnlWithRadiusOf } from './getHistoryPnlOf';
 import { getPairsForRadius, getVolumes } from './getVolumes';
-import { isTradeRecord, TradeRecord } from './isTradeRecord';
+import { isTradeRecord, TradeRecord } from './types/TradeRecord';
 import { buildAndRecordPredictionModel } from './predictionModel';
 import { getTradeStore } from './tradesStore';
 import { getPredictionStore } from './types/predictionStore';

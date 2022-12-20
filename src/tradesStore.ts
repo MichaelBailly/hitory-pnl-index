@@ -1,6 +1,6 @@
 import { Collection, MongoClient } from 'mongodb';
 import { MONGO_TRADES_DB, MONGO_URL } from './config';
-import { TradeRecord } from './isTradeRecord';
+import { TradeRecord } from './types/TradeRecord';
 
 export async function getTradeStore() {
   const client = new MongoClient(MONGO_URL);

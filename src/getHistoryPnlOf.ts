@@ -1,5 +1,5 @@
 import { Collection } from 'mongodb';
-import { isTradeRecord, TradeRecord } from './isTradeRecord';
+import { isTradeRecord, TradeRecord } from './types/TradeRecord';
 import { SimulationRecord } from './types/SimulationRecord';
 import { TradeRecordFragment } from './types/TradeRecordFragment';
 
