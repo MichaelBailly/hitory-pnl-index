@@ -24,7 +24,7 @@ export async function getPredictionOnSimulation(
     throw new Error('Invalid trade record');
   }
 
-  const testResult: boolean | null = await testHistoryPnlOf(
+  const testResult: boolean | null = testHistoryPnlOf(
     tradeHistory,
     simulation.config.historyLimit,
     simulation.config.winRateLimit
@@ -67,7 +67,7 @@ export async function getHistoryPnlWithRadiusOf(
       winRateLimit <= winRateMax;
       winRateLimit += 0.1
     ) {
-      const testResult: boolean | null = await testHistoryPnlOf(
+      const testResult: boolean | null = testHistoryPnlOf(
         tradeHistory,
         historyLimit,
         winRateLimit
@@ -82,40 +82,12 @@ export async function getHistoryPnlWithRadiusOf(
 }
 
 /**
- * Get the win rate of pairs
- * @param collection MongoDB collection
- * @param radiusPairs pair symbols of assets close to the source
- * @param trade source trade record
- * @param historyLimit number of pair symbols to fetch (exact)
- * @param winRateLimit the ratio of wins for those symbols
- * @returns boolean|null is null, not enough history. Otherwise, whether the winRateLimit is reached
+ * Given a collection of trades, and constraints historyLimit and winRateLimit,
+ * tell whether:
+ * - the trades collection meets at least the criteria (returns true)
+ * - the trades collection doesn't have enough history (returns null)
+ * - the trades collection doesn't meet the winRateLimit criteria (returns false)
  */
-/*
-export async function getHistoryPnlOf(
-  collection: Collection<TradeRecord>,
-  radiusPairs: string[],
-  trade: TradeRecord,
-  historyLimit: number = 50,
-  winRateLimit: number = 0.5
-) {
-  const tradeHistory = await collection
-    .find({
-      pair: { $in: radiusPairs },
-      'watcher.type': trade.watcher.type,
-      'watcher.config': trade.watcher.config,
-      boughtTimestamp: { $lt: trade.boughtTimestamp },
-    })
-    .sort({ boughtTimestamp: -1 })
-    .limit(historyLimit)
-    .toArray();
-
-  if (!tradeHistory.every(isTradeRecord)) {
-    throw new Error('Invalid trade record');
-  }
-  return testHistoryPnlOf(tradeHistory, historyLimit, winRateLimit);
-}
-*/
-
 export function testHistoryPnlOf(
   tradeHistory: TradeRecord[],
   historyLimit: number,
